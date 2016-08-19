@@ -60,7 +60,8 @@ function execPipeline (that) {
 }
 
 RedisPersistence.prototype.storeRetained = function (packet, cb) {
-  var key = '{retained}:' + packet.topic
+  var key = 'retained:{' + packet.topic + '}'
+  console.log('========= storeRetained', key)
   if (packet.payload.length === 0) {
     this._db.del(key, cb)
   } else {
@@ -93,11 +94,12 @@ function splitArray (keys, enc, cb) {
 }
 
 RedisPersistence.prototype.createRetainedStream = function (pattern) {
+  console.log('======= createRetainedStream', 'retained:{' + pattern.split(/[#+]/)[0] + '*', checkAndSplit('retained:{', pattern + '}'))
   return new MatchStream({
     objectMode: true,
     redis: this._db,
-    match: '{retained}:' + pattern.split(/[#+]/)[0] + '*'
-  }).pipe(checkAndSplit('{retained}:', pattern))
+    match: 'retained:{' + pattern.split(/[#+]/)[0] + '*'
+  }).pipe(checkAndSplit('retained:{', pattern + '}'))
     .pipe(throughv.obj(this._decodeAndAugment))
 }
 
@@ -446,7 +448,7 @@ RedisPersistence.prototype.incomingDelPacket = function (client, packet, cb) {
 }
 
 RedisPersistence.prototype.putWill = function (client, packet, cb) {
-  var key = '{will}:' + this.broker.id + ':' + client.id
+  var key = 'will:{' + this.broker.id + '}:' + client.id
   packet.clientId = client.id
   packet.brokerId = this.broker.id
   this._getPipeline().setBuffer(key, msgpack.encode(packet), function (err) {
@@ -455,7 +457,7 @@ RedisPersistence.prototype.putWill = function (client, packet, cb) {
 }
 
 RedisPersistence.prototype.getWill = function (client, cb) {
-  var key = '{will}:' + this.broker.id + ':' + client.id
+  var key = 'will:{' + this.broker.id + '}:' + client.id
   this._getPipeline().getBuffer(key, function (err, packet) {
     if (err) { return cb(err) }
 
@@ -470,7 +472,7 @@ RedisPersistence.prototype.getWill = function (client, cb) {
 }
 
 RedisPersistence.prototype.delWill = function (client, cb) {
-  var key = '{will}:' + this.broker.id + ':' + client.id
+  var key = 'will:{' + this.broker.id + '}:' + client.id
   var result = null
   var pipeline = this._getPipeline()
 
@@ -491,7 +493,7 @@ RedisPersistence.prototype.streamWill = function (brokers) {
   return new MatchStream({
     objectMode: true,
     redis: this._db,
-    match: '{will}:*',
+    match: 'will:{*',
     count: 100
   })
   .pipe(through.obj(function (chunk, enc, cb) {

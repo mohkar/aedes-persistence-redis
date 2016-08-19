@@ -10,7 +10,7 @@ var db = new Redis()
 db.on('connect', unref)
 
 function unref () {
-  this.connector.stream.unref()
+  // this.connector.stream.unref()
 }
 
 abs({
